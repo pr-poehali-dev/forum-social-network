@@ -1,10 +1,22 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+
+interface DayContent {
+  text: string;
+  photos: string[];
+  mood: string;
+}
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('calendar');
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [dayContents, setDayContents] = useState<Record<number, DayContent>>({});
+  const [currentText, setCurrentText] = useState('');
 
   const currentMonth = 'ноябрь';
   const romanNumerals = [
@@ -34,6 +46,35 @@ const Index = () => {
   ];
 
   const notesLines = Array(8).fill(null);
+
+  const handleDayClick = (dayIndex: number) => {
+    setSelectedDay(dayIndex);
+    const content = dayContents[dayIndex];
+    if (content) {
+      setCurrentText(content.text);
+    } else {
+      setCurrentText('');
+    }
+  };
+
+  const handleSaveDay = () => {
+    if (selectedDay !== null) {
+      setDayContents({
+        ...dayContents,
+        [selectedDay]: {
+          text: currentText,
+          photos: [],
+          mood: dayIcons[selectedDay % dayIcons.length]
+        }
+      });
+    }
+    setSelectedDay(null);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedDay(null);
+    setCurrentText('');
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -70,19 +111,26 @@ const Index = () => {
                 </div>
 
                 <div className="grid grid-cols-5 md:grid-cols-7 gap-2 md:gap-3">
-                  {romanNumerals.map((numeral, index) => (
-                    <button
-                      key={index}
-                      className="aspect-square bg-accent hover:bg-primary hover:text-primary-foreground transition-all duration-300 rounded-3xl border-3 border-primary/40 p-2 flex flex-col items-center justify-center gap-1 shadow-md hover:shadow-xl hover:scale-105 group"
-                    >
-                      <Icon 
-                        name={dayIcons[index % dayIcons.length]} 
-                        size={20} 
-                        className="text-primary group-hover:text-primary-foreground transition-colors"
-                      />
-                      <span className="text-xs font-bold">{numeral}</span>
-                    </button>
-                  ))}
+                  {romanNumerals.map((numeral, index) => {
+                    const hasContent = dayContents[index];
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleDayClick(index)}
+                        className={`aspect-square ${hasContent ? 'bg-primary text-primary-foreground' : 'bg-accent'} hover:bg-primary hover:text-primary-foreground transition-all duration-300 rounded-3xl border-3 border-primary/40 p-2 flex flex-col items-center justify-center gap-1 shadow-md hover:shadow-xl hover:scale-105 group relative`}
+                      >
+                        {hasContent && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8B5CF6] rounded-full border-2 border-card" />
+                        )}
+                        <Icon 
+                          name={dayIcons[index % dayIcons.length]} 
+                          size={20} 
+                          className={`${hasContent ? 'text-primary-foreground' : 'text-primary'} group-hover:text-primary-foreground transition-colors`}
+                        />
+                        <span className="text-xs font-bold">{numeral}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </Card>
 
@@ -184,6 +232,70 @@ const Index = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={selectedDay !== null} onOpenChange={(open) => !open && handleCloseDialog()}>
+          <DialogContent className="max-w-2xl bg-card border-4 border-primary/30 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-4xl font-bold text-primary flex items-center gap-3">
+                <Icon 
+                  name={selectedDay !== null ? dayIcons[selectedDay % dayIcons.length] : 'Calendar'} 
+                  size={36} 
+                />
+                День {selectedDay !== null ? romanNumerals[selectedDay] : ''}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6 mt-4">
+              <div className="bg-background/50 rounded-xl p-6 border-2 border-primary/20">
+                <h3 className="text-2xl font-bold text-primary mb-3 flex items-center gap-2">
+                  <Icon name="Edit" size={24} />
+                  записи дня
+                </h3>
+                <Textarea
+                  value={currentText}
+                  onChange={(e) => setCurrentText(e.target.value)}
+                  placeholder="Что произошло сегодня? Опиши свои мысли, впечатления, идеи..."
+                  className="min-h-[200px] bg-background border-2 border-primary/20 text-base resize-none"
+                />
+              </div>
+
+              <div className="bg-background/50 rounded-xl p-6 border-2 border-primary/20">
+                <h3 className="text-2xl font-bold text-primary mb-3 flex items-center gap-2">
+                  <Icon name="Image" size={24} />
+                  фотографии
+                </h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="aspect-square bg-background rounded-lg border-4 border-dashed border-primary/30 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+                    >
+                      <Icon name="Plus" size={24} className="text-primary" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSaveDay}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-6 rounded-xl shadow-lg"
+                >
+                  <Icon name="Check" size={20} className="mr-2" />
+                  Сохранить
+                </Button>
+                <Button
+                  onClick={handleCloseDialog}
+                  variant="outline"
+                  className="flex-1 border-2 border-primary/30 text-primary hover:bg-primary/10 text-lg py-6 rounded-xl"
+                >
+                  <Icon name="X" size={20} className="mr-2" />
+                  Отмена
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

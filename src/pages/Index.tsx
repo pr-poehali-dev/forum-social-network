@@ -20,7 +20,10 @@ interface ShelfItem {
   color: string;
   rotation: number;
   height: number;
-  content: any;
+  content: {
+    pages?: Record<number, string>;
+    photos?: string[];
+  };
 }
 
 const Index = () => {
@@ -30,6 +33,8 @@ const Index = () => {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [selectedShelfItem, setSelectedShelfItem] = useState<ShelfItem | null>(null);
   const [bookPage, setBookPage] = useState(0);
+  const [shelfContents, setShelfContents] = useState<Record<string, any>>({});
+  const [bookPageText, setBookPageText] = useState('');
 
   const currentMonth = 'ноябрь';
   const romanNumerals = [
@@ -45,12 +50,12 @@ const Index = () => {
   ];
 
   const shelfItems: ShelfItem[] = [
-    { id: '1', title: 'Мастер и Маргарита', type: 'book', color: 'bg-[#8B5CF6]', rotation: -2, height: 180, content: {} },
-    { id: '2', title: 'The Beatles', type: 'vinyl', color: 'bg-[#1A1F2C]', rotation: 0, height: 160, content: {} },
-    { id: '3', title: 'Летние фото', type: 'photo-album', color: 'bg-[#D946EF]', rotation: 1, height: 170, content: {} },
-    { id: '4', title: 'Мои скетчи', type: 'sketchbook', color: 'bg-[#F97316]', rotation: -1, height: 175, content: {} },
-    { id: '5', title: 'Война и мир', type: 'book', color: 'bg-[#0EA5E9]', rotation: 2, height: 190, content: {} },
-    { id: '6', title: 'Pink Floyd', type: 'vinyl', color: 'bg-[#1A1F2C]', rotation: 0, height: 160, content: {} },
+    { id: '1', title: 'Мастер и Маргарита', type: 'book', color: '#8B5CF6', rotation: -2, height: 180, content: { pages: {} } },
+    { id: '2', title: 'The Beatles', type: 'vinyl', color: '#1A1F2C', rotation: 0, height: 160, content: {} },
+    { id: '3', title: 'Летние фото', type: 'photo-album', color: '#D946EF', rotation: 1, height: 170, content: { photos: [] } },
+    { id: '4', title: 'Мои скетчи', type: 'sketchbook', color: '#F97316', rotation: -1, height: 175, content: { pages: {} } },
+    { id: '5', title: 'Война и мир', type: 'book', color: '#0EA5E9', rotation: 2, height: 190, content: { pages: {} } },
+    { id: '6', title: 'Pink Floyd', type: 'vinyl', color: '#1A1F2C', rotation: 0, height: 160, content: {} },
   ];
 
   const notesLines = Array(8).fill(null);
@@ -103,11 +108,47 @@ const Index = () => {
   const handleShelfItemClick = (item: ShelfItem) => {
     setSelectedShelfItem(item);
     setBookPage(0);
+    const savedContent = shelfContents[item.id];
+    if (savedContent?.pages && savedContent.pages[0]) {
+      setBookPageText(savedContent.pages[0]);
+    } else {
+      setBookPageText('');
+    }
   };
 
   const handleCloseShelfItem = () => {
     setSelectedShelfItem(null);
     setBookPage(0);
+    setBookPageText('');
+  };
+
+  const handleSaveBookPage = () => {
+    if (selectedShelfItem) {
+      const updatedContent = {
+        ...shelfContents,
+        [selectedShelfItem.id]: {
+          ...shelfContents[selectedShelfItem.id],
+          pages: {
+            ...(shelfContents[selectedShelfItem.id]?.pages || {}),
+            [bookPage]: bookPageText
+          }
+        }
+      };
+      setShelfContents(updatedContent);
+    }
+  };
+
+  const handleBookPageChange = (newPage: number) => {
+    handleSaveBookPage();
+    setBookPage(newPage);
+    if (selectedShelfItem) {
+      const savedContent = shelfContents[selectedShelfItem.id];
+      if (savedContent?.pages && savedContent.pages[newPage]) {
+        setBookPageText(savedContent.pages[newPage]);
+      } else {
+        setBookPageText('');
+      }
+    }
   };
 
   return (
@@ -205,52 +246,65 @@ const Index = () => {
               </Card>
             </div>
 
-            <Card className="p-8 bg-card border-4 border-primary/30 shadow-xl animate-fade-in">
-              <h2 className="text-4xl font-bold text-center mb-6 text-primary flex items-center justify-center gap-3">
+            <Card className="p-8 bg-gradient-to-b from-[#2D1810] to-[#1A0F0A] border-4 border-[#4A2C1A] shadow-2xl animate-fade-in overflow-hidden">
+              <h2 className="text-4xl font-bold text-center mb-6 text-[#D4AF37] flex items-center justify-center gap-3 drop-shadow-lg">
                 <Icon name="BookMarked" size={36} />
                 моя полка
               </h2>
               
-              <div className="relative bg-gradient-to-b from-[#8B7355] to-[#6B5845] rounded-xl p-8 border-4 border-[#5C4033] shadow-2xl">
-                <div className="flex justify-around items-end gap-4 min-h-[220px] pb-4">
-                  {shelfItems.map((item, index) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleShelfItemClick(item)}
-                      className="relative group transition-all duration-300 hover:scale-105 hover:-translate-y-2 cursor-pointer"
-                      style={{
-                        transform: `rotate(${item.rotation}deg)`,
-                        animationDelay: `${index * 0.1}s`
-                      }}
-                    >
-                      {item.type === 'vinyl' ? (
-                        <div className={`${item.color} w-16 h-16 rounded-full border-4 border-primary/40 shadow-xl flex items-center justify-center group-hover:shadow-2xl`}>
-                          <div className="w-6 h-6 bg-background rounded-full" />
-                        </div>
-                      ) : (
-                        <div
-                          className={`${item.color} w-16 rounded-lg shadow-xl border-4 border-primary/40 flex flex-col items-center justify-between p-3 group-hover:shadow-2xl`}
-                          style={{ height: `${item.height}px` }}
-                        >
-                          <Icon
-                            name={item.type === 'book' ? 'BookOpen' : item.type === 'photo-album' ? 'Camera' : 'Edit'}
-                            size={24}
-                            className="text-white drop-shadow-lg"
-                          />
-                          <div className="writing-mode-vertical text-white font-bold text-xs text-center drop-shadow-lg">
-                            {item.title}
+              <div className="relative perspective-1000">
+                <div className="relative bg-gradient-to-b from-[#4A3020] via-[#5C3D2E] to-[#4A3020] rounded-lg p-6 border-4 border-[#6B4D3A] shadow-inner">
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJ3b29kIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiM0QTMwMjAiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
+                  
+                  <div className="relative flex justify-around items-end gap-3 min-h-[240px] pb-6">
+                    {shelfItems.map((item, index) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleShelfItemClick(item)}
+                        className="relative group transition-all duration-300 hover:scale-110 hover:-translate-y-3 cursor-pointer filter drop-shadow-2xl"
+                        style={{
+                          transform: `rotate(${item.rotation}deg) perspective(800px) rotateY(${item.rotation * 2}deg)`,
+                          animationDelay: `${index * 0.1}s`
+                        }}
+                      >
+                        {item.type === 'vinyl' ? (
+                          <div style={{ backgroundColor: item.color }} className="w-20 h-20 rounded-full border-4 border-[#1A0F0A] shadow-2xl flex items-center justify-center group-hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] relative">
+                            <div className="w-8 h-8 bg-[#FEF7CD] rounded-full border-2 border-[#1A0F0A]" />
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-transparent via-white/10 to-transparent" />
                           </div>
+                        ) : (
+                          <div
+                            style={{ 
+                              backgroundColor: item.color,
+                              height: `${item.height}px`,
+                              boxShadow: '8px 8px 20px rgba(0,0,0,0.6), inset 2px 2px 4px rgba(255,255,255,0.1)'
+                            }}
+                            className="w-20 rounded-md border-l-4 border-r-2 border-t-2 border-b-4 border-[#1A0F0A] flex flex-col items-center justify-between p-3 relative group-hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/20 rounded-md" />
+                            <Icon
+                              name={item.type === 'book' ? 'BookOpen' : item.type === 'photo-album' ? 'Camera' : 'Brush'}
+                              size={28}
+                              className="text-[#FEF7CD] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] relative z-10"
+                            />
+                            <div className="text-[#FEF7CD] font-bold text-xs text-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] [writing-mode:vertical-lr] rotate-180 relative z-10">
+                              {item.title}
+                            </div>
+                            <div className="absolute top-2 right-2 w-1 h-8 bg-gradient-to-b from-[#D4AF37] to-transparent opacity-60" />
+                          </div>
+                        )}
+                        
+                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#2D1810] border-2 border-[#D4AF37] text-[#D4AF37] px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap shadow-2xl z-20">
+                          {item.title}
                         </div>
-                      )}
-                      
-                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-primary-foreground px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap shadow-lg">
-                        {item.title}
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="h-3 bg-gradient-to-b from-[#5C3D2E] to-[#3A2518] -mx-6 -mb-6 mt-2 border-t-2 border-[#6B4D3A]" />
                 </div>
                 
-                <div className="h-4 bg-gradient-to-b from-[#6B5845] to-[#5C4033] rounded-b-xl -mx-8 -mb-8 mt-4" />
+                <div className="absolute -bottom-2 left-4 right-4 h-4 bg-[#1A0F0A] rounded-b-xl opacity-40 blur-sm" />
               </div>
             </Card>
           </div>
@@ -333,42 +387,47 @@ const Index = () => {
         <DialogContent className="max-w-5xl bg-card border-4 border-primary/30 shadow-2xl max-h-[90vh] overflow-hidden p-8">
           {selectedShelfItem?.type === 'book' && (
             <div className="relative">
-              <div className="flex gap-4">
-                <div className="flex-1 bg-[#FEF7CD] rounded-lg border-4 border-primary/40 shadow-xl p-8 min-h-[500px] relative">
-                  <div className="absolute top-4 right-4 text-sm text-muted-foreground font-bold">{bookPage * 2 + 1}</div>
-                  <div className="space-y-3 pt-8">
-                    {Array(15).fill(null).map((_, i) => (
-                      <div key={i} className="border-b border-primary/20 pb-2" style={{ minHeight: '24px' }} />
-                    ))}
-                  </div>
+              <div className="flex gap-4 perspective-1000">
+                <div className="flex-1 bg-gradient-to-br from-[#FEF7CD] via-[#FFF5D6] to-[#F5E6B8] rounded-lg border-4 border-[#8B7355] shadow-2xl p-8 min-h-[500px] relative transform rotate-y-[-2deg]">
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXBlciIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIj48cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNGRUY3Q0QiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjcGFwZXIpIiBvcGFjaXR5PSIwLjMiLz48L3N2Zz4=')] opacity-20 rounded-lg" />
+                  <div className="absolute top-4 right-4 text-sm text-[#8B7355] font-bold">{bookPage * 2 + 1}</div>
+                  <Textarea
+                    value={bookPageText}
+                    onChange={(e) => setBookPageText(e.target.value)}
+                    onBlur={handleSaveBookPage}
+                    placeholder="Начните писать свою историю..."
+                    className="w-full h-[450px] bg-transparent border-none text-[#2D1810] text-base leading-relaxed resize-none focus:ring-0 focus:outline-none font-serif relative z-10"
+                    style={{ fontFamily: 'Merriweather, serif' }}
+                  />
                 </div>
-                <div className="flex-1 bg-[#FEF7CD] rounded-lg border-4 border-primary/40 shadow-xl p-8 min-h-[500px] relative">
-                  <div className="absolute top-4 right-4 text-sm text-muted-foreground font-bold">{bookPage * 2 + 2}</div>
-                  <div className="space-y-3 pt-8">
-                    {Array(15).fill(null).map((_, i) => (
-                      <div key={i} className="border-b border-primary/20 pb-2" style={{ minHeight: '24px' }} />
+                <div className="flex-1 bg-gradient-to-br from-[#FEF7CD] via-[#FFF5D6] to-[#F5E6B8] rounded-lg border-4 border-[#8B7355] shadow-2xl p-8 min-h-[500px] relative transform rotate-y-[2deg]">
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXBlciIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIj48cmVjdCB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNGRUY3Q0QiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjcGFwZXIpIiBvcGFjaXR5PSIwLjMiLz48L3N2Zz4=')] opacity-20 rounded-lg" />
+                  <div className="absolute top-4 right-4 text-sm text-[#8B7355] font-bold">{bookPage * 2 + 2}</div>
+                  <div className="space-y-4 pt-8 relative z-10">
+                    {Array(12).fill(null).map((_, i) => (
+                      <div key={i} className="border-b border-[#8B7355]/30 pb-3" style={{ minHeight: '30px' }} />
                     ))}
                   </div>
                 </div>
               </div>
               <div className="flex justify-between items-center mt-6">
                 <Button
-                  onClick={() => setBookPage(Math.max(0, bookPage - 1))}
+                  onClick={() => handleBookPageChange(Math.max(0, bookPage - 1))}
                   disabled={bookPage === 0}
-                  variant="outline"
-                  className="border-2 border-primary/30"
+                  className="bg-[#2D1810] hover:bg-[#4A2C1A] text-[#D4AF37] border-2 border-[#6B4D3A]"
                 >
-                  <Icon name="ChevronLeft" size={20} />
+                  <Icon name="ChevronLeft" size={20} className="mr-2" />
                   Назад
                 </Button>
-                <span className="text-lg font-bold text-primary">{selectedShelfItem.title}</span>
+                <span className="text-xl font-bold text-primary px-4 py-2 bg-[#2D1810] rounded-lg border-2 border-[#D4AF37] text-[#D4AF37]">
+                  {selectedShelfItem.title}
+                </span>
                 <Button
-                  onClick={() => setBookPage(bookPage + 1)}
-                  variant="outline"
-                  className="border-2 border-primary/30"
+                  onClick={() => handleBookPageChange(bookPage + 1)}
+                  className="bg-[#2D1810] hover:bg-[#4A2C1A] text-[#D4AF37] border-2 border-[#6B4D3A]"
                 >
                   Вперёд
-                  <Icon name="ChevronRight" size={20} />
+                  <Icon name="ChevronRight" size={20} className="ml-2" />
                 </Button>
               </div>
             </div>
@@ -402,20 +461,23 @@ const Index = () => {
 
           {selectedShelfItem?.type === 'sketchbook' && (
             <div className="relative">
-              <div className="bg-[#FEC6A1] rounded-lg border-4 border-primary/40 shadow-xl p-8 min-h-[500px]">
-                <h3 className="text-3xl font-bold text-primary mb-6 text-center">{selectedShelfItem.title}</h3>
+              <div className="bg-gradient-to-br from-[#FEC6A1] via-[#FFD4B0] to-[#FEC6A1] rounded-lg border-4 border-[#8B7355] shadow-2xl p-8 min-h-[500px]">
+                <h3 className="text-3xl font-bold text-[#2D1810] mb-6 text-center drop-shadow-lg">{selectedShelfItem.title}</h3>
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-background rounded-lg p-4 border-2 border-primary/20 min-h-[350px] flex items-center justify-center">
-                    <Icon name="Palette" size={64} className="text-muted-foreground" />
-                  </div>
-                  <div className="bg-background rounded-lg p-4 border-2 border-primary/20 min-h-[350px] flex items-center justify-center">
-                    <Icon name="Brush" size={64} className="text-muted-foreground" />
+                  <Textarea
+                    placeholder="Опишите ваш скетч или идею..."
+                    className="bg-[#FFF5D6] rounded-lg p-4 border-2 border-[#8B7355] min-h-[350px] text-[#2D1810] resize-none font-serif"
+                    style={{ fontFamily: 'Merriweather, serif' }}
+                  />
+                  <div className="bg-[#FFF5D6] rounded-lg p-4 border-2 border-[#8B7355] min-h-[350px] flex flex-col items-center justify-center gap-4">
+                    <Icon name="Palette" size={64} className="text-[#8B7355]" />
+                    <p className="text-sm text-[#8B7355] italic text-center">Место для рисунка</p>
                   </div>
                 </div>
               </div>
               <Button
                 onClick={handleCloseShelfItem}
-                className="mt-6 w-full bg-primary hover:bg-primary/90"
+                className="mt-6 w-full bg-[#2D1810] hover:bg-[#4A2C1A] text-[#D4AF37] border-2 border-[#6B4D3A]"
               >
                 Закрыть скетчбук
               </Button>
@@ -424,20 +486,21 @@ const Index = () => {
 
           {selectedShelfItem?.type === 'vinyl' && (
             <div className="relative">
-              <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg border-4 border-primary/40 shadow-xl p-12">
+              <div className="bg-gradient-to-br from-[#2D1810] to-[#1A0F0A] rounded-lg border-4 border-[#6B4D3A] shadow-2xl p-12">
                 <div className="flex flex-col items-center">
-                  <div className={`${selectedShelfItem.color} w-64 h-64 rounded-full border-8 border-primary/40 shadow-2xl flex items-center justify-center mb-8 animate-spin-slow`}>
-                    <div className="w-24 h-24 bg-background rounded-full flex items-center justify-center">
-                      <Icon name="Music" size={48} className="text-primary" />
+                  <div style={{ backgroundColor: selectedShelfItem.color }} className="w-72 h-72 rounded-full border-8 border-[#1A0F0A] shadow-[0_0_50px_rgba(0,0,0,0.8)] flex items-center justify-center mb-8 animate-spin-slow relative">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-transparent via-white/5 to-transparent" />
+                    <div className="w-28 h-28 bg-[#FEF7CD] rounded-full flex items-center justify-center border-4 border-[#1A0F0A] relative z-10">
+                      <Icon name="Music" size={56} className="text-[#1A0F0A]" />
                     </div>
                   </div>
-                  <h3 className="text-4xl font-bold text-primary mb-4">{selectedShelfItem.title}</h3>
-                  <p className="text-lg text-muted-foreground italic">Классика рока</p>
+                  <h3 className="text-4xl font-bold text-[#D4AF37] mb-4 drop-shadow-lg">{selectedShelfItem.title}</h3>
+                  <p className="text-lg text-[#8B7355] italic">Классика музыки</p>
                 </div>
               </div>
               <Button
                 onClick={handleCloseShelfItem}
-                className="mt-6 w-full bg-primary hover:bg-primary/90"
+                className="mt-6 w-full bg-[#2D1810] hover:bg-[#4A2C1A] text-[#D4AF37] border-2 border-[#6B4D3A]"
               >
                 Закрыть
               </Button>
